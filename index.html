@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Download Map</title>
+  
+  <!-- OpenLayers JS -->
+  <script src="https://cdn.jsdelivr.net/npm/ol@v7.1.0/dist/ol.js"></script>
+
+  <!-- FileSaver JS --> 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+  <style>
+    #map {
+      width: 1200px;
+      height: 1000px;
+    }
+  </style>
+</head>
+
+<body>
+
+
+
+  <h1>Location Details</h1>
+  <p id="latitude">Latitude: </p>
+  <p id="longitude">Longitude: </p>
+  <p id="accuracy">Accuracy: </p>
+
+  <button onclick="downloadMap()">Download Map</button>
+  <div id="map"></div>
+  <script>
+    var map = new ol.Map({
+      target: 'map',
+      layers: [
+        new ol.layer.Tile({
+          source: new ol.source.OSM()
+        })
+      ],
+      view: new ol.View({
+        center: ol.proj.fromLonLat([0, 0]), // Initial center before getting user's location
+        zoom: 14 // Adjust the zoom level as desired
+      })
+    });
+
+    function showLocation(position) {
+      var latitude = position.coords.latitude;
+      var longitude = position.coords.longitude;
+      var accuracy = position.coords.accuracy;
+
+      document.getElementById("latitude").textContent += latitude;
+      document.getElementById("longitude").textContent += longitude;
+      document.getElementById("accuracy").textContent += accuracy + " meters";
+
+      map.getView().setCenter(ol.proj.fromLonLat([longitude, latitude])); // Update map center
+      
+      // Create a custom icon style with adjustable properties
+      var iconStyle = new ol.style.Style({
+        image: new ol.style.Circle({
+          radius: 8, // Adjust the radius of the circle marker
+          fill: new ol.style.Fill({
+            color: 'red' // Adjust the fill color of the marker (e.g., 'red', '#ff0000')
+          }),
+          stroke: new ol.style.Stroke({
+            color: 'black', // Adjust the stroke color of the marker (e.g., 'black', '#000000')
+            width: 2 // Adjust the stroke width of the marker
+          })
+        })
+      });
+
+      var marker = new ol.Feature({
+        geometry: new ol.geom.Point(ol.proj.fromLonLat([longitude, latitude]))
+      });
+      marker.setStyle(iconStyle); // Apply the custom icon style to the marker
+
+      var vectorSource = new ol.source.Vector({
+        features: [marker]
+      });
+      var vectorLayer = new ol.layer.Vector({
+        source: vectorSource
+      });
+      map.addLayer(vectorLayer); // Add marker to the map
+
+      // Wait for the map to render completely before generating the image
+      setTimeout(function() {
+        var canvas = document.createElement('canvas');
+        canvas.width = map.getSize()[0];
+        canvas.height = map.getSize()[1];
+        var context = canvas.getContext('2d');
+        Array.from(document.querySelectorAll('.ol-layer canvas')).forEach(function (canvas) {
+          if (canvas.width > 0) {
+            context.drawImage(canvas, 0, 0, canvas.width, canvas.height);
+          }
+        });
+        var anchor = document.createElement('a');
+        anchor.href = canvas.toDataURL('image/png');
+        anchor.download = 'map.png';
+        anchor.click();
+      }, 1000); // Adjust the delay if needed
+    }
+
+    function showError(error) {
+      switch (error.code) {
+        case error.PERMISSION_DENIED:
+          alert("User denied the request for Geolocation.");
+          break;
+        case error.POSITION_UNAVAILABLE:
+          alert("Location information is unavailable.");
+          break;
+        case error.TIMEOUT:
+          alert("The request to get user location timed out.");
+          break;
+        case error.UNKNOWN_ERROR:
+          alert("An unknown error occurred.");
+          break;
+      }
+    }
+
+    function downloadMap() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(showLocation, showError);
+      } else {
+        alert("Geolocation is not supported by this browser.");
+      }
+    }
+  </script>
+</body>
+</html>
