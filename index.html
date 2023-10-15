@@ -85,8 +85,21 @@
         var context = canvas.getContext('2d');
         Array.from(document.querySelectorAll('.ol-layer canvas')).forEach(function (canvas) {
           if (canvas.width > 0) {
-            context.drawImage(canvas, 0, 0, canvas.width, canvas.height);
-          }
+            var opacity = canvas.parentNode.style.opacity;
+            context.globalAlpha = opacity === '' ? 1 : Number(opacity);
+            var transform = canvas.style.transform;
+            // Get the transform parameters
+            var matrix = transform
+                .match(/^matrix\(([^\(]*)\)$/)[1]
+                .split(',')
+                .map(Number);
+            // Apply the transform to the canvas
+            CanvasRenderingContext2D.prototype.setTransform.apply(
+                context,
+                matrix
+      );
+      context.drawImage(canvas, 0, 0, canvas.width, canvas.height);
+    }
         });
         var anchor = document.createElement('a');
         anchor.href = canvas.toDataURL('image/png');
