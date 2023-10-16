@@ -10,10 +10,10 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
   <style>
-    #map {
-      width: 1200px;
-      height: 1000px;
-    }
+#map {
+  width: 6400px;
+  height: 3600px; /* Adjust the height to match the 16:9 aspect ratio */
+}
     a[href="https://www.openstreetmap.org/copyright"] {
   display: none;
 }
@@ -29,54 +29,60 @@ body > div > div > div:nth-child(3) > div:nth-child(3) > ul {
   <p id="longitude">Longitude: </p>
   <p id="accuracy">Accuracy: </p>
 
-  <button onclick="downloadMap()">Download Map</button>
+  <button onclick="generateMapImage()">Download Map</button>
+  <button onclick="getUserLocation()">Get User Location</button>
   <div id="map"></div>
   <script>
-    window.addEventListener('load', downloadMap);
-
-    var map = new ol.Map({
-      target: 'map',
-      layers: [
-        new ol.layer.Tile({
-          source: new ol.source.OSM()
+    var map;
+  
+    function initializeMap() {
+      map = new ol.Map({
+        target: 'map',
+        layers: [
+          new ol.layer.Tile({
+            source: new ol.source.OSM()
+          })
+        ],
+        view: new ol.View({
+          center: ol.proj.fromLonLat([0, 0]), // Initial center before getting user's location
+          zoom: 16 // Adjust the zoom level as desired
         })
-      ],
-      view: new ol.View({
-        center: ol.proj.fromLonLat([0, 0]), // Initial center before getting user's location
-        zoom: 14 // Adjust the zoom level as desired
-      })
-    });
-
+      });
+    }
+  
     function showLocation(position) {
       var latitude = position.coords.latitude;
       var longitude = position.coords.longitude;
       var accuracy = position.coords.accuracy;
-
+  
       document.getElementById("latitude").textContent += latitude;
       document.getElementById("longitude").textContent += longitude;
       document.getElementById("accuracy").textContent += accuracy + " meters";
-
+  
       map.getView().setCenter(ol.proj.fromLonLat([longitude, latitude])); // Update map center
-      
-      // Create a custom icon style with adjustable properties
+  
+      createMarker(latitude, longitude);
+    }
+  
+    function createMarker(latitude, longitude) {
       var iconStyle = new ol.style.Style({
         image: new ol.style.Circle({
-          radius: 8, // Adjust the radius of the circle marker
+          radius: 22, // Adjust the radius of the circle marker
           fill: new ol.style.Fill({
             color: 'red' // Adjust the fill color of the marker (e.g., 'red', '#ff0000')
           }),
           stroke: new ol.style.Stroke({
             color: 'black', // Adjust the stroke color of the marker (e.g., 'black', '#000000')
-            width: 2 // Adjust the stroke width of the marker
+            width: 4 // Adjust the stroke width of the marker
           })
         })
       });
-
+  
       var marker = new ol.Feature({
         geometry: new ol.geom.Point(ol.proj.fromLonLat([longitude, latitude]))
       });
       marker.setStyle(iconStyle); // Apply the custom icon style to the marker
-
+  
       var vectorSource = new ol.source.Vector({
         features: [marker]
       });
@@ -84,9 +90,12 @@ body > div > div > div:nth-child(3) > div:nth-child(3) > ul {
         source: vectorSource
       });
       map.addLayer(vectorLayer); // Add marker to the map
-
+    }
+  
+    function generateMapImage() {
+      
       // Wait for the map to render completely before generating the image
-      setTimeout(function() {
+      setTimeout(function () {
         var canvas = document.createElement('canvas');
         canvas.width = map.getSize()[0];
         canvas.height = map.getSize()[1];
@@ -98,16 +107,16 @@ body > div > div > div:nth-child(3) > div:nth-child(3) > ul {
             var transform = canvas.style.transform;
             // Get the transform parameters
             var matrix = transform
-                .match(/^matrix\(([^\(]*)\)$/)[1]
-                .split(',')
-                .map(Number);
+              .match(/^matrix\(([^\(]*)\)$/)[1]
+              .split(',')
+              .map(Number);
             // Apply the transform to the canvas
             CanvasRenderingContext2D.prototype.setTransform.apply(
-                context,
-                matrix
-      );
-      context.drawImage(canvas, 0, 0, canvas.width, canvas.height);
-    }
+              context,
+              matrix
+            );
+            context.drawImage(canvas, 0, 0, canvas.width, canvas.height);
+          }
         });
         var anchor = document.createElement('a');
         anchor.href = canvas.toDataURL('image/png');
@@ -115,7 +124,7 @@ body > div > div > div:nth-child(3) > div:nth-child(3) > ul {
         anchor.click();
       }, 1000); // Adjust the delay if needed
     }
-
+  
     function showError(error) {
       switch (error.code) {
         case error.PERMISSION_DENIED:
@@ -132,15 +141,20 @@ body > div > div > div:nth-child(3) > div:nth-child(3) > ul {
           break;
       }
     }
-
-    function downloadMap() {
+  
+    function getUserLocation() {
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(showLocation, showError);
       } else {
         alert("Geolocation is not supported by this browser.");
       }
     }
-    
+  
+    window.addEventListener('load', function () {
+      initializeMap();
+      getUserLocation();
+      window.scrollTo(0, 0);
+    });
   </script>
 </body>
 </html>
